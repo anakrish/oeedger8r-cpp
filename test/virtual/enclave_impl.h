@@ -30,6 +30,11 @@ struct _oe_enclave
     uint32_t _num_ecalls;
     void (*_set_enclave)(oe_enclave_t*);
     void* _lib_handle;
+    const char** ecall_function_names;
+    uint32_t num_ecall_function_names;
+    uint32_t* _cache;
+    uint32_t _cache_size;
+    uint32_t _lock;
 
     _oe_enclave(const oe_ocall_func_t* ocall_table, uint32_t num_ocalls)
     {
@@ -40,6 +45,11 @@ struct _oe_enclave
         _num_ecalls = 0;
         _set_enclave = nullptr;
         _lib_handle = nullptr;
+        ecall_function_names = nullptr;
+        num_ecall_function_names = 0;
+        _cache = nullptr;
+        _cache_size = 0;
+        _lock = 0;
     }
 
     void* malloc(uint64_t size)

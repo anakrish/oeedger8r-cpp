@@ -94,6 +94,8 @@ class CEmitter
               << ""
               << "/**** Trusted function IDs ****/";
         trusted_function_ids();
+        out() << "/**** Trusted function names ****/";
+        trusted_function_names();
         out() << "/**** ECALL marshalling structs. ****/";
         ecall_marshalling_structs();
         out() << "/**** ECALL function wrappers. ****/"
@@ -115,7 +117,7 @@ class CEmitter
               << "";
         ocalls_table();
         out() << create_prototype(edl_->name_) << "{"
-              << "    return oe_create_enclave("
+              << "    oe_result_t result =  oe_create_enclave("
               << "               path,"
               << "               type,"
               << "               flags,"
@@ -124,6 +126,12 @@ class CEmitter
               << "               __" + edl_->name_ + "_ocall_function_table,"
               << "               " + to_str(edl_->untrusted_funcs_.size()) + ","
               << "               enclave);"
+              << "    if (result == OE_OK)"
+              << "        result = oe_register_ecall_function_names("
+              << "                    *enclave,"
+              << "                    __ecall_names,"
+              << "                    OE_COUNTOF(__ecall_names));"
+              << "    return result;"
               << "}"
               << ""
               << "OE_EXTERNC_END";
@@ -141,6 +149,16 @@ class CEmitter
         out() << pfx + "trusted_call_id_max = OE_ENUM_MAX"
               << "};"
               << "";
+    }
+
+    void trusted_function_names()
+    {
+        out() << "static const char* __ecall_names[] ="
+              << "{";
+        for (Function* f : edl_->trusted_funcs_)
+            out() << "    \"" + f->name_ + "\",";
+        out() << "    \"\""
+              << "};";
     }
 
     void untrusted_function_ids()

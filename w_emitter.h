@@ -85,7 +85,9 @@ class WEmitter
         std::string args_t = f->name_ + "_args_t";
         out() << prototype(f, ecall, gen_t()) << "{"
               << "    oe_result_t _result = OE_FAILURE;"
-              << "";
+              << ""
+              << "    uint32_t _function_id = " + edl_->name_ + "_fcn_id_" +
+                     f->name_ + ";";
         enclave_status_check();
         out() << "    /* Marshalling struct. */"
               << "    " + args_t +
@@ -133,12 +135,13 @@ class WEmitter
         out() << "    "
               << "    /* Copy args structure (now filled) to input buffer. */"
               << "    memcpy(_pargs_in, &_args, sizeof(*_pargs_in));"
-              << ""
-              << "    /* Call " + other + " function. */"
+              << "";
+        get_function_id(f);
+        out() << "    /* Call " + other + " function. */"
               << "    if ((_result = " + call + "(";
         if (!gen_t())
             out() << "             enclave,";
-        out() << "             " + edl_->name_ + "_fcn_id_" + f->name_ + ","
+        out() << "             _function_id,"
               << "             _input_buffer,"
               << "             _input_buffer_size,"
               << "             _output_buffer,"
@@ -580,6 +583,20 @@ class WEmitter
         if (!gen_t())
             out() << "    /* No `_ptrs` to free for deep copy. */"
                   << "";
+    }
+
+    void get_function_id(Function* f)
+    {
+        if (gen_t())
+            return;
+        out() << "    static uint32_t _function_uid = (uint32_t) -1;"
+              << "    _result = oe_get_ecall_function_id("
+              << "        enclave,"
+              << "        \"" + f->name_ + "\","
+              << "        &_function_uid,"
+              << "        &_function_id);"
+              << "    if (_result != OE_OK)"
+              << "        goto done;";
     }
 };
 

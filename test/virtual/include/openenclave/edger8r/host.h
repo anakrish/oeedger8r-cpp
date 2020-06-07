@@ -31,6 +31,34 @@
 OE_EXTERNC_BEGIN
 
 /**
+ * Register ecall function names.
+ *
+ * @param enclave Handle of the enclave.
+ * @param function_names Array of edl function names supported by the enclave,
+ * in order of function ids.
+ * @param function_names_count  Number of function names.
+ */
+oe_result_t oe_register_ecall_function_names(
+    oe_enclave_t* enclave,
+    const char** function_names,
+    uint32_t function_names_count);
+
+/**
+ * Generate or fetch the function id for the ECALL specified by given function
+ * name.
+ *
+ * @param enclave Handle to the enclave. This can be used to cache the result.
+ * @param function_name Name of the ecall for which function id is requested.
+ * @param uid Globally (across enclave) unique identifier for the function.
+ * @param function_id The local identifier for the function.
+ */
+oe_result_t oe_get_ecall_function_id(
+    oe_enclave_t* enclave,     /* in */
+    const char* function_name, /* in */
+    uint32_t* uid,             /* in/out */
+    uint32_t* function_id);    /* in/out */
+
+/**
  * Perform a high-level enclave function call (ECALL).
  *
  * Call the enclave function that matches the given function-id.

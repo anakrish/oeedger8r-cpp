@@ -1,7 +1,6 @@
 # Copyright (c) Open Enclave SDK contributors. Licensed under the MIT License.
 
-
-set (INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 if (WIN32)
   set(COMPILE_FLAGS "")
@@ -15,7 +14,7 @@ target_include_directories(oeedger8r_test_enclave PUBLIC ${INCLUDE_DIRS})
 
 target_compile_options(oeedger8r_test_enclave PUBLIC ${COMPILE_FLAGS})
 
-add_library(oeedger8r_test_host STATIC host.cpp)
+add_library(oeedger8r_test_host STATIC host.cpp function_id.cpp)
 
 target_include_directories(oeedger8r_test_host PUBLIC ${INCLUDE_DIRS})
 
