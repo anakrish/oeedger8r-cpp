@@ -74,7 +74,7 @@ class HEmitter
             out() << create_prototype(edl_->name_) + ";"
                   << "";
         out() << "/**** ECALL prototypes. ****/";
-        trusted_prototypes();
+        gen_t_h_ ? trusted_prototypes_t_h() : trusted_prototypes_u_h();
         out() << "/**** OCALL prototypes. ****/";
         untrusted_prototypes();
         out() << "OE_EXTERNC_END"
@@ -82,11 +82,39 @@ class HEmitter
         footer(out(), guard);
     }
 
-    void trusted_prototypes()
+    void trusted_prototypes_t_h()
     {
+        std::string prefix = edl_->name_ + "_";
         for (Function* f : edl_->trusted_funcs_)
             out() << prototype(f, true, gen_t_h_) + ";"
                   << "";
+        if (edl_->trusted_funcs_.empty())
+            out() << "";
+    }
+
+    void trusted_prototypes_u_h()
+    {
+        std::string prefix = edl_->name_ + "_";
+        for (Function* f : edl_->trusted_funcs_)
+        {
+            std::string args_str = "(enclave";
+            if (f->rtype_->tag_ != Void)
+                args_str += ", _retval";
+            for (Decl* p : f->params_)
+                args_str += ", " + p->name_;
+            args_str += ")";
+            // clang-format off
+            std::string guard = "EDGER8R_" + upper(f->name_);
+            out() << "#ifndef " + guard << "#define " + guard
+                  << prototype(f, true, gen_t_h_, prefix) + ";"
+		  << ""
+		  << "OE_INLINE " + prototype(f, true, gen_t_h_, "")
+		  << "{"
+		  << "    return " + prefix + f->name_ + args_str + ";"
+	          << "}"
+                  << "#endif //" + guard << "";
+            // clang-format on
+        }
         if (edl_->trusted_funcs_.empty())
             out() << "";
     }

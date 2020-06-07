@@ -221,7 +221,8 @@ class CEmitter
 
     void emit_wrapper(Function* f)
     {
-        WEmitter(edl_, file_).emit(f, !gen_t_c_);
+        std::string prefix = gen_t_c_ ? "" : (edl_->name_ + "_");
+        WEmitter(edl_, file_).emit(f, !gen_t_c_, prefix);
     }
 };
 
