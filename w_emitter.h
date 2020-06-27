@@ -155,8 +155,8 @@ class WEmitter
         {
             out() << "             enclave,"
                   << "             &global_id,"
-                  << "             __" + edl_->name_ + "_ecall_info_table[" +
-                         fcn_id + "].name,";
+                  << "             __" + edl_->name_ +
+                         "_ecall_info_table.names[" + fcn_id + "],";
         }
         else
         {

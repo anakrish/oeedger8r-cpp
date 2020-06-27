@@ -6,7 +6,7 @@
 
 #include <map>
 
-#define OE_ECALL_ID_NULL OE_UINT64_MAX
+#define OE_ECALL_ID_NULL OE_UINT32_MAX
 /* Temporily set value. */
 #define OE_MAX_ECALLS 256
 
@@ -24,13 +24,7 @@ typedef void (*oe_ecall_func_t)(
     size_t output_buffer_size,
     size_t* output_bytes_written);
 
-/**
- * Type of ecall information
- */
-typedef struct _oe_ecall_id_t
-{
-    uint64_t id;
-} oe_ecall_id_t;
+struct _oe_ecall_info_table;
 
 struct _oe_enclave
 {
@@ -40,26 +34,20 @@ struct _oe_enclave
     uint32_t _num_ocalls;
     const oe_ecall_func_t* _ecall_table;
     uint32_t _num_ecalls;
-    oe_ecall_id_t _ecall_id_table[OE_MAX_ECALLS];
+    struct _oe_ecall_info_table* _ecall_info_table;
     void (*_set_enclave)(oe_enclave_t*);
     void* _lib_handle;
 
-    _oe_enclave(
-        const oe_ocall_func_t* ocall_table,
-        uint32_t num_ocalls,
-        uint32_t num_ecalls)
+    _oe_enclave(const oe_ocall_func_t* ocall_table, uint32_t num_ocalls)
     {
         status = OE_OK;
         _ocall_table = ocall_table;
         _num_ocalls = num_ocalls;
         _ecall_table = nullptr;
         _num_ecalls = 0;
+        _ecall_info_table = nullptr;
         _set_enclave = nullptr;
         _lib_handle = nullptr;
-        for (int i = 0; i < OE_MAX_ECALLS; i++)
-        {
-            _ecall_id_table[i].id = OE_ECALL_ID_NULL;
-        }
     }
 
     void* malloc(uint64_t size)

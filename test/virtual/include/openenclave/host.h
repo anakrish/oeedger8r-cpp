@@ -138,10 +138,13 @@ typedef struct _oe_enclave_setting
     } u;
 } oe_enclave_setting_t;
 
-typedef struct _oe_ecall_info_t
+typedef struct _oe_ecall_info_table
 {
-    const char* name;
-} oe_ecall_info_t;
+    const char** names;
+    uint32_t num_ecalls;
+    uint32_t* cache;
+    uint32_t cache_size;
+} oe_ecall_info_table_t;
 
 /**
  * Create an enclave from an enclave image file.
@@ -185,8 +188,7 @@ oe_result_t oe_create_enclave(
     uint32_t setting_count,
     const oe_ocall_func_t* ocall_table,
     uint32_t ocall_count,
-    const oe_ecall_info_t* ecall_name_table,
-    uint32_t ecall_count,
+    oe_ecall_info_table_t* ecall_info_table,
     oe_enclave_t** enclave);
 
 /**
@@ -398,8 +400,8 @@ void oe_free_key(
     uint8_t* key_info,
     size_t key_info_size);
 
-#define OE_GLOBAL_ECALL_ID_NULL OE_UINT64_MAX
-#define OE_ECALL_ID_NULL OE_UINT64_MAX
+#define OE_GLOBAL_ECALL_ID_NULL OE_UINT32_MAX
+#define OE_ECALL_ID_NULL OE_UINT32_MAX
 
 /**
  * Obtain the id from the global ecall table by name.

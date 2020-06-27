@@ -95,7 +95,7 @@ extern "C"
         }
 
         /* Look-up the ecall id from the per-enclave table. */
-        *id = enclave->_ecall_id_table[*global_id].id;
+        *id = enclave->_ecall_info_table->cache[*global_id];
 
         result = OE_OK;
     done:
@@ -103,12 +103,12 @@ extern "C"
         return result;
     }
 
-    static oe_result_t oe_host_register_enclave_functions(
-        oe_enclave_t* enclave,
-        const oe_ecall_info_t* ecall_info_table,
-        uint32_t num_ecalls)
+    static std::mutex oe_table_lock;
+    static oe_result_t oe_host_register_enclave_functions(oe_enclave_t* enclave)
     {
         oe_result_t result = OE_UNEXPECTED;
+        bool locked = false;
+        oe_ecall_info_table_t* ecall_info_table = NULL;
 
         if (!enclave)
         {
@@ -116,29 +116,46 @@ extern "C"
             goto done;
         }
 
-        /*  Nothing to add when the table is empty, fall through. */
-        if (!ecall_info_table || !num_ecalls)
+        ecall_info_table = enclave->_ecall_info_table;
+        if (!ecall_info_table || !ecall_info_table->num_ecalls)
         {
             result = OE_OK;
             goto done;
         }
 
-        uint32_t i;
-        for (i = 0; i < num_ecalls; i++)
+        oe_table_lock.lock();
+        locked = true;
+
+        if (ecall_info_table->cache != NULL)
+        {
+            // Cache already initialized by another instance of the same enclave
+            // binary.
+            result = OE_OK;
+            goto done;
+        }
+
+        ecall_info_table->cache = new uint32_t[OE_MAX_ECALLS];
+        for (uint32_t i = 0; i < OE_MAX_ECALLS; ++i)
+            ecall_info_table->cache[i] = OE_ECALL_ID_NULL;
+        // TODO: at exit, deallocate above table.
+
+        for (uint32_t i = 0; i < ecall_info_table->num_ecalls; i++)
         {
             uint64_t global_id = OE_GLOBAL_ECALL_ID_NULL;
-            const char* name = ecall_info_table[i].name;
+            const char* name = ecall_info_table->names[i];
             uint64_t local_id = i;
 
             /* Assign a proper global id based on the global __ecall_table. */
             if ((oe_get_global_ecall_id_by_name(name, &global_id)) != OE_OK)
                 continue;
 
-            enclave->_ecall_id_table[global_id].id = local_id;
+            ecall_info_table->cache[global_id] = local_id;
         }
         result = OE_OK;
 
     done:
+        if (locked)
+            oe_table_lock.unlock();
 
         return result;
     }
@@ -224,8 +241,7 @@ extern "C"
         uint32_t setting_count,
         const oe_ocall_func_t* ocall_table,
         uint32_t num_ocalls,
-        const oe_ecall_info_t* ecall_info_table,
-        uint32_t num_ecalls,
+        oe_ecall_info_table_t* ecall_info_table,
         oe_enclave_t** enclave)
     {
         OE_UNUSED(path);
@@ -234,8 +250,7 @@ extern "C"
         OE_UNUSED(settings);
         OE_UNUSED(setting_count);
 
-        oe_enclave_t* enc =
-            new _oe_enclave(ocall_table, num_ocalls, num_ecalls);
+        oe_enclave_t* enc = new _oe_enclave(ocall_table, num_ocalls);
         printf("Loading virtual enclave %s\n", path);
 #if _WIN32
         std::string path_with_ext = std::string(path) + ".dll";
@@ -268,9 +283,11 @@ extern "C"
             exit(1);
         }
 
-        if (oe_host_register_enclave_functions(
-                enc, ecall_info_table, num_ecalls) != OE_OK)
-            return OE_FAILURE;
+        {
+            enc->_ecall_info_table = ecall_info_table;
+            if (oe_host_register_enclave_functions(enc) != OE_OK)
+                return OE_FAILURE;
+        }
 
         enc->_lib_handle = h;
         *enclave = enc;

@@ -85,8 +85,8 @@ oe_result_t ecall_string_no_null_terminator_modified(
     if ((_result = oe_call_enclave_function(
              enclave,
              &global_id,
-             __all_ecall_info_table[all_fcn_id_ecall_string_no_null_terminator]
-                 .name,
+             __all_ecall_info_table
+                 .names[all_fcn_id_ecall_string_no_null_terminator],
              _input_buffer,
              _input_buffer_size,
              _output_buffer,
@@ -195,8 +195,8 @@ oe_result_t ecall_wstring_no_null_terminator_modified(
     if ((_result = oe_call_enclave_function(
              enclave,
              &global_id,
-             __all_ecall_info_table[all_fcn_id_ecall_wstring_no_null_terminator]
-                 .name,
+             __all_ecall_info_table
+                 .names[all_fcn_id_ecall_wstring_no_null_terminator],
              _input_buffer,
              _input_buffer_size,
              _output_buffer,
