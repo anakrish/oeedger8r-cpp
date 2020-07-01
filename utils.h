@@ -241,16 +241,19 @@ inline std::string psize(Decl* p, const std::string& prefix = "")
     else if (p->type_->tag_ == Foreign && p->attrs_ && p->attrs_->isptr_)
         s = "sizeof(*(" + p->type_->name_ + ")0)";
 
+    const std::string& count_prefix = p->attrs_->count_is_prop_ ? prefix : "";
+    const std::string& size_prefix = p->attrs_->size_is_prop_ ? prefix : "";
+
     if (!p->attrs_->size_.is_empty() && !p->attrs_->count_.is_empty())
-        return "(" + size_attr_str(p->attrs_->size_, prefix) + " * " +
-               count_attr_str(p->attrs_->count_, prefix) + ")";
+        return "(" + size_attr_str(p->attrs_->size_, size_prefix) + " * " +
+               count_attr_str(p->attrs_->count_, count_prefix) + ")";
 
     if (p->attrs_ && !p->attrs_->count_.is_empty())
-        return "((size_t)" + count_attr_str(p->attrs_->count_, prefix) + " * " +
-               s + ")";
+        return "((size_t)" + count_attr_str(p->attrs_->count_, count_prefix) +
+               " * " + s + ")";
 
     if (p->attrs_ && !p->attrs_->size_.is_empty())
-        return size_attr_str(p->attrs_->size_, prefix);
+        return size_attr_str(p->attrs_->size_, size_prefix);
 
     return s;
 }

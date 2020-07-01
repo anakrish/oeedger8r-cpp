@@ -59,6 +59,8 @@ struct Attrs
     bool user_check_;
     Token size_;
     Token count_;
+    bool size_is_prop_;
+    bool count_is_prop_;
 };
 
 typedef std::vector<std::string> Dims;

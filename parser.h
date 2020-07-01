@@ -71,6 +71,10 @@ class Parser
     void warn_allow_list(const std::string& fname);
     void warn_non_portable(Function* f);
     void error_size_count(Function* f);
+    void check_size_count_parameter(
+        const std::string& parent_name,
+        bool is_function,
+        Decl* sc_decl);
     void check_size_count_decls(
         const std::string& parent_name,
         bool is_function,

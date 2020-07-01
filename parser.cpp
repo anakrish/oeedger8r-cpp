@@ -136,6 +136,14 @@ bool Parser::print_loc(const std::string& msg_kind)
         exit(1);                             \
     } while (0)
 
+#define WARNING(fmt, ...)                    \
+    do                                       \
+    {                                        \
+        print_loc("warning");                \
+        fprintf(stderr, fmt, ##__VA_ARGS__); \
+        fprintf(stderr, "\n");               \
+    } while (0)
+
 void Parser::expect(const char* str)
 {
     Token t = next();
@@ -606,7 +614,9 @@ Attrs* Parser::parse_attributes(bool fcn)
                              false,
                              false,
                              Token::empty(),
-                             Token::empty()};
+                             Token::empty(),
+                             false,
+                             false};
     do
     {
         Token t = next();
@@ -885,17 +895,6 @@ void Parser::error_size_count(Function* f)
     }
 }
 
-static Token _get_size_or_count_attr(Decl* d)
-{
-    if (d->attrs_)
-    {
-        return !d->attrs_->size_.is_empty() ? d->attrs_->size_
-                                            : d->attrs_->count_;
-    }
-
-    return Token::empty();
-}
-
 static Decl* _get_decl(const std::vector<Decl*>& decls, const std::string& name)
 {
     for (Decl* d : decls)
@@ -906,6 +905,52 @@ static Decl* _get_decl(const std::vector<Decl*>& decls, const std::string& name)
     return nullptr;
 }
 
+void Parser::check_size_count_parameter(
+    const std::string& parent_name,
+    bool is_function,
+    Decl* sc_decl)
+{
+    Type* ty = sc_decl->type_;
+    if (ty->tag_ == Const)
+        ty = ty->t_;
+
+    if (sc_decl->dims_ && !sc_decl->dims_->empty())
+        ERROR("size/count has invalid type.");
+
+    switch (ty->tag_)
+    {
+        case Unsigned:
+            break;
+
+        case Char:
+        case Short:
+        case Int:
+        case Long:
+        case LLong:
+        case Int8:
+        case Int16:
+        case Int32:
+        case Int64:
+        {
+            fprintf(
+                stderr,
+                "Warning: %s '%s': Size or count parameter '%s' should not "
+                "be signed.\n",
+                is_function ? "Function" : "struct",
+                parent_name.c_str(),
+                sc_decl->name_.c_str());
+            break;
+        }
+
+        case Ptr:
+        case Struct:
+        case Union:
+            ERROR("size/count has invalid type.");
+        default:
+            break;
+    }
+}
+
 void Parser::check_size_count_decls(
     const std::string& parent_name,
     bool is_function,
@@ -913,57 +958,42 @@ void Parser::check_size_count_decls(
 {
     for (Decl* d : decls)
     {
-        Token t = _get_size_or_count_attr(d);
-        if (t.is_empty() || !t.is_name())
+        if (!d->attrs_)
             continue;
-        // TODO: Correct filename.
-        line_ = t.line_;
-        col_ = t.col_;
 
-        Decl* sc_decl = _get_decl(decls, t);
-        if (sc_decl == nullptr)
-            ERROR(
-                "could not find declaration for '%s'.",
-                static_cast<std::string>(t).c_str());
-
-        Type* ty = sc_decl->type_;
-        if (ty->tag_ == Const)
-            ty = ty->t_;
-
-        if (sc_decl->dims_ && !sc_decl->dims_->empty())
-            ERROR("size/count has invalid type.");
-
-        switch (ty->tag_)
         {
-            case Unsigned:
-                continue;
-
-            case Char:
-            case Short:
-            case Int:
-            case Long:
-            case LLong:
-            case Int8:
-            case Int16:
-            case Int32:
-            case Int64:
+            Token t = d->attrs_ ? d->attrs_->count_ : Token::empty();
+            if (t.is_name())
             {
-                fprintf(
-                    stderr,
-                    "Warning: %s '%s': Size or count parameter '%s' should not "
-                    "be signed.\n",
-                    is_function ? "Function" : "struct",
-                    parent_name.c_str(),
-                    static_cast<std::string>(t).c_str());
-                continue;
-            }
+                // TODO: Correct filename.
+                line_ = t.line_;
+                col_ = t.col_;
 
-            case Ptr:
-            case Struct:
-            case Union:
-                ERROR("size/count has invalid type.");
-            default:
-                break;
+                Decl* sc_decl = _get_decl(decls, t);
+                if (sc_decl)
+                {
+                    d->attrs_->count_is_prop_ = true;
+                    check_size_count_parameter(
+                        parent_name, is_function, sc_decl);
+                }
+            }
+        }
+        {
+            Token t = d->attrs_ ? d->attrs_->size_ : Token::empty();
+            if (t.is_name())
+            {
+                // TODO: Correct filename.
+                line_ = t.line_;
+                col_ = t.col_;
+
+                Decl* sc_decl = _get_decl(decls, t);
+                if (sc_decl)
+                {
+                    d->attrs_->size_is_prop_ = true;
+                    check_size_count_parameter(
+                        parent_name, is_function, sc_decl);
+                }
+            }
         }
     }
 }
